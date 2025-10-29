@@ -1,140 +1,345 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pro Background Remover</title>
-<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.14/dist/tailwind.min.css" rel="stylesheet">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Background Remover — Local & Pro</title>
 <style>
-body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
-canvas, img { max-width:100%; border-radius:12px; }
-button:disabled { opacity:.5; cursor:not-allowed; }
+  :root{
+    --bg:#071025; --card:#0f1724; --accent:#2563eb; --muted:#9ca3af; --glass: rgba(255,255,255,0.03);
+  }
+  body{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#061021,#081526); color:#e6eef8; font-family:system-ui,Segoe UI,Roboto,Arial; padding:20px; }
+  .app{ width:100%; max-width:980px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:12px; box-shadow:0 12px 40px rgba(2,6,23,0.6); }
+  header{ display:flex; gap:12px; align-items:center; }
+  h1{ margin:0; font-size:20px; }
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+  .btn{ background:var(--accent); color:white; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+  .btn.secondary{ background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); padding:8px 10px; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; box-shadow:none; }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+  .card{ background:var(--card); padding:12px; border-radius:10px; min-height:260px; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; border:1px solid var(--glass); }
+  canvas, img{ max-width:100%; border-radius:8px; background:transparent; }
+  label.switch{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
+  .status{ margin-top:12px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .progress{ height:8px; background:rgba(255,255,255,0.04); border-radius:8px; overflow:hidden; width:220px; }
+  .bar{ height:100%; background:linear-gradient(90deg,#60a5fa,#2563eb); width:0%; transition:width .25s ease; }
+  @media(max-width:800px){ .grid{ grid-template-columns:1fr; } .controls{ justify-content:center; } }
+  input[type=file]{ display:none; }
+  .small{ font-size:13px; color:var(--muted); }
+  .api-key{ width:260px; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; }
 </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-<div class="bg-slate-800/60 backdrop-blur-md rounded-2xl shadow-2xl p-6 max-w-3xl w-full">
-  <h1 class="text-2xl font-bold text-center mb-2">AI Background Remover (Pro)</h1>
-  <p class="text-center text-slate-400 mb-4">High-quality cutout powered by remove.bg or Pixian.ai</p>
+<body>
+  <div class="app" role="main" aria-label="Background remover">
+    <header>
+      <h1>Background Remover — Local & Pro</h1>
+      <div style="margin-left:auto" class="small">Local (BodyPix) + optional remove.bg</div>
+    </header>
 
-  <div class="flex flex-col md:flex-row gap-6">
-    <div class="flex-1">
-      <h3 class="font-semibold mb-2 text-center">Original</h3>
-      <canvas id="original" class="bg-white"></canvas>
+    <div class="controls">
+      <label class="btn secondary" for="fileInput">Choose Image</label>
+      <input id="fileInput" type="file" accept="image/*">
+      <button id="removeBtn" class="btn" disabled>Remove Background</button>
+      <button id="downloadPng" class="btn" disabled>Download PNG</button>
+      <button id="downloadJpg" class="btn" disabled>Download JPG</button>
+
+      <label class="switch" title="Use pro API (remove.bg) for better results">
+        <input id="usePro" type="checkbox" />
+        <span class="small">Use Pro API (remove.bg)</span>
+      </label>
+
+      <input id="apiKey" class="api-key" type="password" placeholder="remove.bg API key (optional)" />
     </div>
-    <div class="flex-1">
-      <h3 class="font-semibold mb-2 text-center">Result</h3>
-      <img id="result" alt="Result Preview" class="hidden bg-white" />
-      <canvas id="preview" class="bg-white"></canvas>
+
+    <div class="grid" style="margin-top:12px;">
+      <div class="card">
+        <div style="width:100%; text-align:left; font-weight:600;">Original</div>
+        <canvas id="originalCanvas" width="640" height="480" aria-label="Original image"></canvas>
+      </div>
+
+      <div class="card">
+        <div style="width:100%; text-align:left; font-weight:600;">Result</div>
+        <canvas id="resultCanvas" width="640" height="480" aria-label="Result image"></canvas>
+        <img id="resultImg" alt="Result preview" style="display:none; max-width:100%; border-radius:8px;" />
+      </div>
+    </div>
+
+    <div class="status">
+      <div class="small" id="statusText">Model: loading (local fallback will be ready shortly)...</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="progress" title="progress"><div id="progBar" class="bar"></div></div>
+        <div class="small" id="timeHint">Idle</div>
+      </div>
     </div>
   </div>
 
-  <div class="text-center mt-6">
-    <input type="file" id="fileInput" accept="image/*" class="hidden">
-    <label for="fileInput" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg cursor-pointer font-semibold">Choose Image</label>
-    <button id="removeBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold ml-2" disabled>Remove Background</button>
-  </div>
-
-  <div class="text-center mt-4">
-    <button id="downloadPng" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold" disabled>Download PNG</button>
-    <button id="downloadJpg" class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-semibold ml-2" disabled>Download JPG</button>
-  </div>
-
-  <p id="status" class="text-center text-slate-400 mt-4">Waiting for image...</p>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0.5/dist/body-pix.min.js"></script>
 <script>
-const fileInput = document.getElementById('fileInput');
-const removeBtn = document.getElementById('removeBtn');
-const downloadPng = document.getElementById('downloadPng');
-const downloadJpg = document.getElementById('downloadJpg');
-const statusEl = document.getElementById('status');
-const originalCanvas = document.getElementById('original');
-const previewCanvas = document.getElementById('preview');
-const resultImg = document.getElementById('result');
-const oCtx = originalCanvas.getContext('2d');
-const pCtx = previewCanvas.getContext('2d');
-let currentImageBlob = null;
+(async () => {
+  // Elements
+  const fileInput = document.getElementById('fileInput');
+  const removeBtn = document.getElementById('removeBtn');
+  const downloadPng = document.getElementById('downloadPng');
+  const downloadJpg = document.getElementById('downloadJpg');
+  const useProCheckbox = document.getElementById('usePro');
+  const apiKeyInput = document.getElementById('apiKey');
+  const statusText = document.getElementById('statusText');
+  const progBar = document.getElementById('progBar');
+  const timeHint = document.getElementById('timeHint');
 
-fileInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    const scale = Math.min(800 / img.width, 600 / img.height, 1);
-    const w = img.width * scale, h = img.height * scale;
-    originalCanvas.width = w; originalCanvas.height = h;
-    previewCanvas.width = w; previewCanvas.height = h;
-    oCtx.drawImage(img, 0, 0, w, h);
-    pCtx.clearRect(0,0,w,h);
-    removeBtn.disabled = false;
-    statusEl.textContent = "Image loaded. Ready to remove background.";
-  };
-  img.src = URL.createObjectURL(file);
-  currentImageBlob = file;
-});
+  const originalCanvas = document.getElementById('originalCanvas');
+  const resultCanvas = document.getElementById('resultCanvas');
+  const resultImg = document.getElementById('resultImg');
+  const oCtx = originalCanvas.getContext('2d', { willReadFrequently: true });
+  const rCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
 
-// Professional background removal using remove.bg API
-removeBtn.addEventListener('click', async () => {
-  if (!currentImageBlob) return;
-  removeBtn.disabled = true;
-  statusEl.textContent = "Processing high-quality background removal...";
-  try {
-    const formData = new FormData();
-    formData.append("image_file", currentImageBlob);
-    formData.append("size", "auto");
+  // State
+  let bodyPixModel = null;
+  let currentImageFile = null;
+  let lastResultBlobUrl = null;
 
-    // 🔹 Replace with your own API key from remove.bg or Pixian.ai
-    const API_KEY = "YOUR_API_KEY_HERE";
-    const res = await fetch("https://api.remove.bg/v1.0/removebg", {
-      method: "POST",
-      headers: { "X-Api-Key": API_KEY },
-      body: formData
-    });
-
-    if (!res.ok) throw new Error("API error: " + res.status);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    resultImg.src = url;
-    resultImg.classList.remove('hidden');
-    previewCanvas.classList.add('hidden');
-    statusEl.textContent = "Done! Download your clean image.";
-    downloadPng.disabled = false;
-    downloadJpg.disabled = false;
-
-    // cache blob for downloads
-    resultImg.dataset.blobUrl = url;
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = "Failed to remove background. (Check your API key)";
-  } finally {
-    removeBtn.disabled = false;
+  // Helpers
+  function setStatus(text, pct = 0, hint = '') {
+    statusText.textContent = text;
+    progBar.style.width = `${pct}%`;
+    timeHint.textContent = hint || (pct ? `${pct}%` : 'Idle');
   }
-});
+  function enableDownloads(enable) {
+    downloadPng.disabled = !enable;
+    downloadJpg.disabled = !enable;
+  }
+  function revokeBlob() {
+    if (lastResultBlobUrl) {
+      try { URL.revokeObjectURL(lastResultBlobUrl); } catch(e) {}
+      lastResultBlobUrl = null;
+    }
+  }
 
-// Downloads
-downloadPng.addEventListener('click', () => {
-  const a = document.createElement('a');
-  a.href = resultImg.dataset.blobUrl;
-  a.download = "removed-bg.png";
-  a.click();
-});
+  // Load local BodyPix model (best-effort)
+  setStatus('Loading local BodyPix model (for offline fallback)...', 4);
+  try {
+    bodyPixModel = await bodyPix.load({
+      architecture: 'MobileNetV1',
+      outputStride: 16,
+      multiplier: 0.75,
+      quantBytes: 2
+    });
+    setStatus('BodyPix model ready (local). You can use local removal.', 100, 'Ready');
+  } catch (err) {
+    console.error('BodyPix load failed:', err);
+    setStatus('Local model load failed — pro API recommended.', 0, 'Local model error');
+  }
 
-downloadJpg.addEventListener('click', async () => {
-  const img = new Image();
-  img.src = resultImg.dataset.blobUrl;
-  await img.decode();
-  const c = document.createElement('canvas');
-  c.width = img.width;
-  c.height = img.height;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0,0,c.width,c.height);
-  ctx.drawImage(img,0,0);
-  const a = document.createElement('a');
-  a.href = c.toDataURL('image/jpeg', 0.9);
-  a.download = "removed-bg.jpg";
-  a.click();
-});
+  // File selected: draw to original canvas
+  fileInput.addEventListener('change', async (e) => {
+    revokeBlob();
+    const file = e.target.files && e.target.files[0];
+    if (!file) {
+      setStatus('No file selected.', 0); 
+      return;
+    }
+    currentImageFile = file;
+    setStatus('Loading image...', 6);
+
+    try {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await img.decode(); // wait for load
+      // scale to reasonable size while preserving aspect ratio
+      const MAX_W = 1280, MAX_H = 960;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(MAX_W / w, MAX_H / h, 1);
+      w = Math.round(w * scale); h = Math.round(h * scale);
+
+      originalCanvas.width = w; originalCanvas.height = h;
+      resultCanvas.width = w; resultCanvas.height = h;
+      // Clear canvases
+      oCtx.clearRect(0,0,w,h);
+      rCtx.clearRect(0,0,w,h);
+      resultImg.style.display = 'none';
+
+      // Draw image
+      oCtx.drawImage(img, 0, 0, w, h);
+      setStatus('Image loaded. Ready to remove background.', 0, 'Ready');
+      removeBtn.disabled = false;
+      enableDownloads(false);
+      // release objectURL soon
+      setTimeout(() => URL.revokeObjectURL(img.src), 2000);
+    } catch (err) {
+      console.error('Image load error', err);
+      setStatus('Failed to load image. Check console.', 0, 'Error');
+    }
+  });
+
+  // Remove background (either local BodyPix or Pro API)
+  removeBtn.addEventListener('click', async () => {
+    if (!currentImageFile) return;
+    removeBtn.disabled = true;
+    revokeBlob(); // clear previous result
+    enableDownloads(false);
+    resultImg.style.display = 'none';
+    rCtx.clearRect(0,0,resultCanvas.width,resultCanvas.height);
+
+    const usePro = useProCheckbox.checked;
+    if (usePro) {
+      // PRO API path (remove.bg)
+      const key = apiKeyInput.value.trim();
+      if (!key) {
+        setStatus('Please enter your remove.bg API key or uncheck "Use Pro API".', 0, 'API key required');
+        removeBtn.disabled = false;
+        return;
+      }
+      setStatus('Uploading to remove.bg and waiting for result...', 10, 'Uploading');
+      try {
+        const form = new FormData();
+        form.append('image_file', currentImageFile);
+        form.append('size', 'auto');
+
+        const res = await fetch('https://api.remove.bg/v1.0/removebg', {
+          method: 'POST',
+          headers: { 'X-Api-Key': key },
+          body: form
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> '');
+          throw new Error(`API returned ${res.status}: ${txt}`);
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        lastResultBlobUrl = url;
+        // show result image
+        resultImg.src = url;
+        resultImg.onload = () => {
+          // fit preview canvas to image if desired, but we can use <img> for preview
+          resultImg.style.display = 'block';
+        };
+        setStatus('Pro result ready. You can download.', 100, 'Done');
+        enableDownloads(true);
+      } catch (err) {
+        console.error('Pro API error', err);
+        setStatus('Pro API failed: ' + (err.message || 'error'), 0, 'API error');
+      } finally {
+        removeBtn.disabled = false;
+      }
+      return;
+    }
+
+    // LOCAL path: BodyPix segmentation
+    if (!bodyPixModel) {
+      setStatus('Local model not available — check connection or enable Pro API.', 0, 'No local model');
+      removeBtn.disabled = false;
+      return;
+    }
+
+    try {
+      setStatus('Segmenting (local)...', 10, 'Segmenting');
+      // Run segmentation on canvas (good practice to pass canvas)
+      const segmentation = await bodyPixModel.segmentPerson(originalCanvas, {
+        internalResolution: 'medium', // 'low'|'medium'|'high'
+        segmentationThreshold: 0.7,
+        maxDetections: 1,
+        scoreThreshold: 0.3,
+        nmsRadius: 20
+      });
+      setStatus('Compositing result...', 60, 'Compositing');
+
+      const w = originalCanvas.width, h = originalCanvas.height;
+      const src = oCtx.getImageData(0,0,w,h);
+      const dst = rCtx.createImageData(w,h);
+      // segmentation.data is Uint8Array with length w*h (0/1 mask)
+      const mask = segmentation.data;
+      // iterate pixels: each mask index corresponds to one pixel (R,G,B,A grouped in ImageData)
+      for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
+        if (mask[i] === 1) {
+          // copy original pixel
+          dst.data[p]   = src.data[p];
+          dst.data[p+1] = src.data[p+1];
+          dst.data[p+2] = src.data[p+2];
+          dst.data[p+3] = src.data[p+3]; // preserve original alpha (should be 255)
+        } else {
+          // background => transparent
+          dst.data[p] = dst.data[p+1] = dst.data[p+2] = 0;
+          dst.data[p+3] = 0;
+        }
+      }
+
+      // Put result into result canvas
+      rCtx.clearRect(0,0,w,h);
+      rCtx.putImageData(dst, 0, 0);
+      setStatus('Local removal done. You can download PNG (transparent) or JPG (white).', 100, 'Done');
+      enableDownloads(true);
+    } catch (err) {
+      console.error('Local removal error', err);
+      setStatus('Local removal failed — see console.', 0, 'Error');
+    } finally {
+      removeBtn.disabled = false;
+    }
+  });
+
+  // Downloads
+  function downloadDataUrl(dataUrl, filename) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  downloadPng.addEventListener('click', async () => {
+    // If pro API result is shown in <img>, prefer its blob URL
+    if (lastResultBlobUrl) {
+      downloadDataUrl(lastResultBlobUrl, `removed-bg-${Date.now()}.png`);
+      return;
+    }
+    // else use resultCanvas (local)
+    try {
+      const url = resultCanvas.toDataURL('image/png');
+      downloadDataUrl(url, `removed-bg-${Date.now()}.png`);
+    } catch (err) {
+      console.error(err);
+      setStatus('Download failed.', 0, 'Error');
+    }
+  });
+
+  downloadJpg.addEventListener('click', async () => {
+    if (lastResultBlobUrl) {
+      // convert pro PNG blob to JPG by drawing to canvas with white bg
+      const img = new Image();
+      img.src = lastResultBlobUrl;
+      await img.decode();
+      const tmp = document.createElement('canvas');
+      tmp.width = img.width; tmp.height = img.height;
+      const ctx = tmp.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,tmp.width,tmp.height);
+      ctx.drawImage(img, 0, 0);
+      downloadDataUrl(tmp.toDataURL('image/jpeg', 0.92), `removed-bg-${Date.now()}.jpg`);
+      return;
+    }
+    // local canvas -> draw onto white background then export jpeg
+    try {
+      const { width, height } = resultCanvas;
+      const tmp = document.createElement('canvas');
+      tmp.width = width; tmp.height = height;
+      const ctx = tmp.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,width,height);
+      ctx.drawImage(resultCanvas, 0, 0);
+      const url = tmp.toDataURL('image/jpeg', 0.92);
+      downloadDataUrl(url, `removed-bg-${Date.now()}.jpg`);
+    } catch (err) {
+      console.error(err);
+      setStatus('JPG download failed.', 0, 'Error');
+    }
+  });
+
+  // Safety: revoke object URLs when page unloads
+  window.addEventListener('beforeunload', () => revokeBlob());
+
+})();
 </script>
 </body>
 </html>
