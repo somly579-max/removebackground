@@ -3,69 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Speak Website — សូមសរសេរ និងស្តាប់</title>
+  <title>AI និយាយភាសាខ្មែរ</title>
   <style>
-    :root{--bg:#0f172a;--card:#0b1220;--accent:#7c3aed;--text:#e6eef8}
-    body{font-family:Inter, system-ui, sans-serif; background:linear-gradient(135deg,#041025 0%, #071a2b 100%); color:var(--text); margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-    .card{background:rgba(255,255,255,0.03);backdrop-filter:blur(6px);border-radius:12px;padding:20px;max-width:820px;width:100%;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-    h1{margin:0 0 8px;font-size:20px}
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#22c55e;--text:#e6eef8}
+    body{font-family:'Khmer OS Battambang', system-ui, sans-serif; background:linear-gradient(135deg,#041025 0%, #071a2b 100%); color:var(--text); margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(6px);border-radius:12px;padding:20px;max-width:820px;width:100%;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:22px}
     p.lead{margin:0 0 16px;opacity:0.9}
-    textarea{width:100%;min-height:140px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.25);color:var(--text);resize:vertical}
+    textarea{width:100%;min-height:140px;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.25);color:var(--text);resize:vertical;font-family:'Khmer OS Battambang'}
     .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
     .btn{background:var(--accent);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer}
-    select,input[type=text]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:var(--text)}
+    select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.2);color:var(--text)}
     .small{font-size:13px;opacity:0.85}
-    footer{margin-top:12px;font-size:12px;opacity:0.8}
-    .hint{margin-top:8px;font-size:13px;color:#cfe3ff}
-    .responseBox{margin-top:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);min-height:56px}
+    .responseBox{margin-top:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);min-height:56px}
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>AI Speak — សរសេរ แล้ว AI និយាយ</h1>
-    <p class="lead">សរសេរលើប្រអប់ខាងក្រោម ហើយចុច <strong>Send & Speak</strong>។ ត្រូវការសំលេង AI (បុរស) — អាចជ្រើស voice និង pitch/rate។</p>
+    <h1>AI និយាយភាសាខ្មែរ</h1>
+    <p class="lead">សរសេរអត្ថបទជាភាសាខ្មែរហើយចុច <strong>និយាយ</strong>។ វានឹងអានអត្ថបទជាសំលេងខ្មែរអោយអ្នកស្តាប់។</p>
 
-    <label class="small">Message (សរសេរ):</label>
-    <textarea id="inputText" placeholder="សរសេរ Hello ..."></textarea>
+    <label class="small">អត្ថបទ៖</label>
+    <textarea id="inputText" placeholder="សូមសរសេរអត្ថបទនៅទីនេះ..."></textarea>
 
     <div class="row">
-      <label class="small">Voice:</label>
+      <label class="small">ជ្រើសសំលេង:</label>
       <select id="voiceSelect"></select>
-
-      <label class="small">Pitch:</label>
-      <select id="pitchSelect">
-        <option value="0.6">0.6</option>
-        <option value="0.8">0.8</option>
-        <option value="1" selected>1</option>
-        <option value="1.2">1.2</option>
-        <option value="1.4">1.4</option>
-      </select>
-
-      <label class="small">Rate:</label>
-      <select id="rateSelect">
-        <option value="0.8">0.8</option>
-        <option value="1" selected>1</option>
-        <option value="1.1">1.1</option>
-        <option value="1.2">1.2</option>
-      </select>
-
-      <button id="speakBtn" class="btn">Send & Speak</button>
+      <button id="speakBtn" class="btn">និយាយ</button>
     </div>
 
-    <div class="hint">Voice selection will try to prefer a typical male-sounding voice when available. If you want real AI-generated natural voices (higher quality), see the notes below to plug in a TTS API (OpenAI, ElevenLabs, etc.).</div>
-
-    <div class="responseBox" id="responseBox">Response will appear here...</div>
-
-    <footer>
-      <div class="small">Notes: Works best on modern browsers (Chrome, Edge, Firefox). For secure pages use HTTPS. To use a conversational AI you can plug your own server / API key — code includes an optional section for OpenAI Chat completions (commented and explained).</div>
-    </footer>
+    <div class="responseBox" id="responseBox">សំលេងនឹងចេញនៅទីនេះ...</div>
   </div>
 
   <script>
-    // ---------- Utilities & Voice setup ----------
     const voiceSelect = document.getElementById('voiceSelect');
-    const pitchSelect = document.getElementById('pitchSelect');
-    const rateSelect = document.getElementById('rateSelect');
     const speakBtn = document.getElementById('speakBtn');
     const inputText = document.getElementById('inputText');
     const responseBox = document.getElementById('responseBox');
@@ -73,131 +44,49 @@
     function loadVoices(){
       const voices = speechSynthesis.getVoices();
       voiceSelect.innerHTML = '';
-      // Try to sort voices to prefer male-like names first (best-effort)
-      const preferred = [];
-      const rest = [];
-      for(const v of voices){
-        // heuristic: name contains 'Male' or 'Google UK English Male' or 'John', 'Daniel', etc.
-        if(/male|man|john|david|daniel|alex|mark|paul|william|matt/i.test(v.name)) preferred.push(v);
-        else rest.push(v);
-      }
-      const sorted = [...preferred, ...rest];
-      sorted.forEach(v => {
+      const khVoices = voices.filter(v => v.lang.toLowerCase().includes('km'));
+      const allVoices = khVoices.length > 0 ? khVoices : voices;
+      allVoices.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v.name + '|' + v.lang;
         opt.textContent = `${v.name} — ${v.lang}`;
         voiceSelect.appendChild(opt);
       });
-      if(sorted.length===0){
-        const opt = document.createElement('option'); opt.textContent='(no voices)'; voiceSelect.appendChild(opt);
+      if(allVoices.length===0){
+        const opt = document.createElement('option');
+        opt.textContent = '(មិនមានសំលេង)';
+        voiceSelect.appendChild(opt);
       }
     }
 
-    // Some browsers load voices asynchronously
     speechSynthesis.onvoiceschanged = loadVoices;
     loadVoices();
 
-    function speakText(text, opts={}){
+    function speakText(text){
       if(!text) return;
-      const ut = new SpeechSynthesisUtterance(text);
-      // pick voice
+      const utter = new SpeechSynthesisUtterance(text);
       const sel = voiceSelect.value;
       if(sel && sel.includes('|')){
         const [name, lang] = sel.split('|');
         const match = speechSynthesis.getVoices().find(v => v.name===name && v.lang===lang);
-        if(match) ut.voice = match;
+        if(match) utter.voice = match;
       }
-      ut.pitch = parseFloat(opts.pitch ?? pitchSelect.value) || 1;
-      ut.rate = parseFloat(opts.rate ?? rateSelect.value) || 1;
-      // lower volume/pitch slightly to make voice sound 'deeper' if user chose a high-pitch voice
-      if(!ut.voice && ut.pitch<0.9) ut.pitch = ut.pitch;
+      utter.lang = utter.voice?.lang || 'km-KH';
+      utter.pitch = 1;
+      utter.rate = 1;
 
-      ut.onstart = ()=>{ speakBtn.textContent = 'Speaking...'; speakBtn.disabled = true; }
-      ut.onend = ()=>{ speakBtn.textContent = 'Send & Speak'; speakBtn.disabled = false; }
-      speechSynthesis.cancel(); // stop previous
-      speechSynthesis.speak(ut);
+      utter.onstart = ()=>{ speakBtn.textContent = 'កំពុងនិយាយ...'; speakBtn.disabled = true; }
+      utter.onend = ()=>{ speakBtn.textContent = 'និយាយ'; speakBtn.disabled = false; }
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utter);
     }
 
-    // ---------- Optional: Simple local 'AI' fallback ----------
-    // If you don't provide an API key / server, this fallback simply echoes and adds a canned reply.
-    function simpleAIreply(text){
-      // very simple conversational rules (expand as you like)
-      const t = text.trim().toLowerCase();
-      if(!t) return "សូមសរសេរអ្វីមួយ។";
-      if(t.includes('hello')||t.includes('hi')||t.includes('សួស្តី')) return 'សួស្តី! តើខ្ញុំអាចជួយអ្វីបានដែរ?';
-      if(t.includes('how are you') || t.includes('សុខស្បើយ')) return 'ខ្ញុំសុខសប្បាយ—អរគុណដែលសួរ!';
-      // fallback: short echo + friendly
-      return 'អ្នកបានសរសេរ: "' + text + '" — ខ្ញុំបានទទួល។';
-    }
-
-    // ---------- Optional: Hook for real AI (OpenAI) ----------
-    /*
-    To use OpenAI Chat API (or your own backend) replace callToAI() with a fetch() to your server that sends the user text to OpenAI
-    Example (DO NOT put your API key directly in client-side code for production):
-
-    async function callToAI(userText){
-      const resp = await fetch('/api/chat', { // your server endpoint
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({message:userText})
-      });
-      const data = await resp.json();
-      return data.reply; // server should return { reply: '...' }
-    }
-
-    If you want a quick test without creating a server, you can use OpenAI's REST API directly from client for testing only (exposing key is insecure):
-
-    async function callToAI(userText){
-      const openaiKey = prompt('Paste OpenAI API key (for testing only)');
-      const r = await fetch('https://api.openai.com/v1/chat/completions', {
-        method:'POST', headers:{
-          'Content-Type':'application/json',
-          'Authorization': 'Bearer ' + openaiKey
-        },
-        body: JSON.stringify({ model: 'gpt-4o-mini', messages:[{role:'user',content:userText}], max_tokens:300 })
-      });
-      const j = await r.json();
-      return j.choices?.[0]?.message?.content || 'No reply';
-    }
-
-    For high-quality TTS (more natural male voices) consider using ElevenLabs, Azure TTS, or OpenAI's voice endpoints — those are paid services and require server-side proxying of API keys.
-    */
-
-    // ---------- Main button handler ----------
-    speakBtn.addEventListener('click', async ()=>{
+    speakBtn.addEventListener('click', ()=>{
       const text = inputText.value.trim();
-      if(!text){ alert('សូមសរសេរអត្ថបទមុនចុច Send & Speak'); return; }
-      responseBox.textContent = 'Generating reply...';
-
-      // If you have a server / callToAI function, call it here. Otherwise use simpleAIreply.
-      let reply;
-      try{
-        // Replace this with: reply = await callToAI(text);
-        reply = simpleAIreply(text);
-      }catch(e){ reply = 'Error: ' + (e.message || e); }
-
-      responseBox.textContent = reply;
-
-      // Use speech synthesis to speak the reply in a male-ish voice (best-effort)
-      // Try to select a voice that sounds male by heuristics; otherwise user can pick.
-      // If you want deeper voice, reduce pitch < 1.
-      // If user wants different voice, change selection in the dropdown.
-      // Auto-select a likely-male voice if none selected yet
-      if(!voiceSelect.value || voiceSelect.value.startsWith('(no voices)')){
-        // choose first voice whose lang starts with 'en' or 'km' if present
-        const voices = speechSynthesis.getVoices();
-        let pick = voices.find(v=>/male|man|john|david|daniel|alex/i.test(v.name));
-        if(!pick) pick = voices.find(v=>/^en/.test(v.lang)) || voices[0];
-        if(pick) voiceSelect.value = pick.name + '|' + pick.lang;
-      }
-
-      // Slightly prefer deeper pitch for male tone
-      const opts = { pitch: Math.max(0.7, parseFloat(pitchSelect.value)), rate: parseFloat(rateSelect.value) };
-      speakText(reply, opts);
+      if(!text){ alert('សូមសរសេរអត្ថបទជាមុន'); return; }
+      responseBox.textContent = text;
+      speakText(text);
     });
-
-    // keyboard shortcut: Ctrl+Enter to send
-    inputText.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key==='Enter'){ speakBtn.click(); } });
-
   </script>
 </body>
 </html>
