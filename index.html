@@ -3,201 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Background Remover</title>
+<title>Pro Background Remover</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.14/dist/tailwind.min.css" rel="stylesheet">
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-  }
-  .container {
-    background: #1e293b;
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
-    padding: 20px;
-    max-width: 800px;
-    width: 100%;
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 10px;
-  }
-  .controls {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  input[type=file] {
-    display: none;
-  }
-  label, button {
-    background: #2563eb;
-    color: white;
-    padding: 10px 16px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    margin: 4px;
-  }
-  button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-  canvas {
-    max-width: 100%;
-    border-radius: 8px;
-    background: white;
-    display: block;
-    margin: 10px auto;
-  }
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-  }
-  @media(max-width:700px){ .row { grid-template-columns: 1fr; } }
-  .status { text-align: center; color: #a5b4fc; margin-top: 10px; font-size: 14px; }
+body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+canvas, img { max-width:100%; border-radius:12px; }
+button:disabled { opacity:.5; cursor:not-allowed; }
 </style>
 </head>
-<body>
-<div class="container">
-  <h1>AI Background Remover</h1>
-  <div class="controls">
-    <label for="fileInput">Choose Image</label>
-    <input type="file" id="fileInput" accept="image/*">
-    <button id="removeBtn" disabled>Remove Background</button>
-    <button id="downloadPngBtn" disabled>Download PNG</button>
-    <button id="downloadJpgBtn" disabled>Download JPG</button>
-  </div>
+<body class="flex items-center justify-center min-h-screen p-4">
+<div class="bg-slate-800/60 backdrop-blur-md rounded-2xl shadow-2xl p-6 max-w-3xl w-full">
+  <h1 class="text-2xl font-bold text-center mb-2">AI Background Remover (Pro)</h1>
+  <p class="text-center text-slate-400 mb-4">High-quality cutout powered by remove.bg or Pixian.ai</p>
 
-  <div class="row">
-    <div>
-      <h3 style="text-align:center">Original</h3>
-      <canvas id="originalCanvas"></canvas>
+  <div class="flex flex-col md:flex-row gap-6">
+    <div class="flex-1">
+      <h3 class="font-semibold mb-2 text-center">Original</h3>
+      <canvas id="original" class="bg-white"></canvas>
     </div>
-    <div>
-      <h3 style="text-align:center">Result</h3>
-      <canvas id="resultCanvas"></canvas>
+    <div class="flex-1">
+      <h3 class="font-semibold mb-2 text-center">Result</h3>
+      <img id="result" alt="Result Preview" class="hidden bg-white" />
+      <canvas id="preview" class="bg-white"></canvas>
     </div>
   </div>
 
-  <div class="status" id="status">Model loading...</div>
+  <div class="text-center mt-6">
+    <input type="file" id="fileInput" accept="image/*" class="hidden">
+    <label for="fileInput" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg cursor-pointer font-semibold">Choose Image</label>
+    <button id="removeBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-semibold ml-2" disabled>Remove Background</button>
+  </div>
+
+  <div class="text-center mt-4">
+    <button id="downloadPng" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg font-semibold" disabled>Download PNG</button>
+    <button id="downloadJpg" class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg font-semibold ml-2" disabled>Download JPG</button>
+  </div>
+
+  <p id="status" class="text-center text-slate-400 mt-4">Waiting for image...</p>
 </div>
 
-<!-- TensorFlow + BodyPix -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0.5/dist/body-pix.min.js"></script>
-
 <script>
-(async () => {
-  const fileInput = document.getElementById('fileInput');
-  const removeBtn = document.getElementById('removeBtn');
-  const downloadPngBtn = document.getElementById('downloadPngBtn');
-  const downloadJpgBtn = document.getElementById('downloadJpgBtn');
-  const originalCanvas = document.getElementById('originalCanvas');
-  const resultCanvas = document.getElementById('resultCanvas');
-  const oCtx = originalCanvas.getContext('2d');
-  const rCtx = resultCanvas.getContext('2d');
-  const statusEl = document.getElementById('status');
-  let model, image;
+const fileInput = document.getElementById('fileInput');
+const removeBtn = document.getElementById('removeBtn');
+const downloadPng = document.getElementById('downloadPng');
+const downloadJpg = document.getElementById('downloadJpg');
+const statusEl = document.getElementById('status');
+const originalCanvas = document.getElementById('original');
+const previewCanvas = document.getElementById('preview');
+const resultImg = document.getElementById('result');
+const oCtx = originalCanvas.getContext('2d');
+const pCtx = previewCanvas.getContext('2d');
+let currentImageBlob = null;
 
-  // Load BodyPix model
-  statusEl.textContent = "Loading AI model...";
-  model = await bodyPix.load({
-    architecture: 'MobileNetV1',
-    outputStride: 16,
-    multiplier: 0.75,
-    quantBytes: 2
-  });
-  statusEl.textContent = "Model loaded! Choose an image.";
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(800 / img.width, 600 / img.height, 1);
+    const w = img.width * scale, h = img.height * scale;
+    originalCanvas.width = w; originalCanvas.height = h;
+    previewCanvas.width = w; previewCanvas.height = h;
+    oCtx.drawImage(img, 0, 0, w, h);
+    pCtx.clearRect(0,0,w,h);
+    removeBtn.disabled = false;
+    statusEl.textContent = "Image loaded. Ready to remove background.";
+  };
+  img.src = URL.createObjectURL(file);
+  currentImageBlob = file;
+});
 
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 640;
-      const maxH = 480;
-      let w = img.width, h = img.height;
-      const scale = Math.min(maxW / w, maxH / h, 1);
-      w *= scale; h *= scale;
-      originalCanvas.width = w;
-      originalCanvas.height = h;
-      resultCanvas.width = w;
-      resultCanvas.height = h;
-      oCtx.drawImage(img, 0, 0, w, h);
-      image = img;
-      removeBtn.disabled = false;
-      statusEl.textContent = "Click 'Remove Background'";
-    };
-    img.src = URL.createObjectURL(file);
-  });
+// Professional background removal using remove.bg API
+removeBtn.addEventListener('click', async () => {
+  if (!currentImageBlob) return;
+  removeBtn.disabled = true;
+  statusEl.textContent = "Processing high-quality background removal...";
+  try {
+    const formData = new FormData();
+    formData.append("image_file", currentImageBlob);
+    formData.append("size", "auto");
 
-  removeBtn.addEventListener('click', async () => {
-    if (!image) return;
-    removeBtn.disabled = true;
-    statusEl.textContent = "Processing... please wait";
-
-    const segmentation = await model.segmentPerson(originalCanvas, {
-      internalResolution: 'medium',
-      segmentationThreshold: 0.7
+    // 🔹 Replace with your own API key from remove.bg or Pixian.ai
+    const API_KEY = "YOUR_API_KEY_HERE";
+    const res = await fetch("https://api.remove.bg/v1.0/removebg", {
+      method: "POST",
+      headers: { "X-Api-Key": API_KEY },
+      body: formData
     });
 
-    const { width, height } = originalCanvas;
-    const imageData = oCtx.getImageData(0, 0, width, height);
-    const result = rCtx.createImageData(width, height);
-    for (let i = 0; i < segmentation.data.length; i++) {
-      const n = i * 4;
-      if (segmentation.data[i] === 1) {
-        result.data[n] = imageData.data[n];
-        result.data[n + 1] = imageData.data[n + 1];
-        result.data[n + 2] = imageData.data[n + 2];
-        result.data[n + 3] = 255;
-      } else {
-        result.data[n] = result.data[n + 1] = result.data[n + 2] = 0;
-        result.data[n + 3] = 0;
-      }
-    }
-    rCtx.putImageData(result, 0, 0);
+    if (!res.ok) throw new Error("API error: " + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    resultImg.src = url;
+    resultImg.classList.remove('hidden');
+    previewCanvas.classList.add('hidden');
+    statusEl.textContent = "Done! Download your clean image.";
+    downloadPng.disabled = false;
+    downloadJpg.disabled = false;
 
-    statusEl.textContent = "Done! You can download the image.";
-    downloadPngBtn.disabled = false;
-    downloadJpgBtn.disabled = false;
+    // cache blob for downloads
+    resultImg.dataset.blobUrl = url;
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Failed to remove background. (Check your API key)";
+  } finally {
     removeBtn.disabled = false;
-  });
-
-  function download(dataURL, filename) {
-    const a = document.createElement('a');
-    a.href = dataURL;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
+});
 
-  downloadPngBtn.addEventListener('click', () => {
-    const url = resultCanvas.toDataURL('image/png');
-    download(url, 'removed-bg.png');
-  });
+// Downloads
+downloadPng.addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = resultImg.dataset.blobUrl;
+  a.download = "removed-bg.png";
+  a.click();
+});
 
-  downloadJpgBtn.addEventListener('click', () => {
-    const { width, height } = resultCanvas;
-    const temp = document.createElement('canvas');
-    temp.width = width; temp.height = height;
-    const ctx = temp.getContext('2d');
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(resultCanvas, 0, 0);
-    const url = temp.toDataURL('image/jpeg', 0.9);
-    download(url, 'removed-bg.jpg');
-  });
-})();
+downloadJpg.addEventListener('click', async () => {
+  const img = new Image();
+  img.src = resultImg.dataset.blobUrl;
+  await img.decode();
+  const c = document.createElement('canvas');
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0,0,c.width,c.height);
+  ctx.drawImage(img,0,0);
+  const a = document.createElement('a');
+  a.href = c.toDataURL('image/jpeg', 0.9);
+  a.download = "removed-bg.jpg";
+  a.click();
+});
 </script>
 </body>
 </html>
