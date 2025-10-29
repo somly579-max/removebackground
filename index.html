@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Remove Background — Download JPG</title>
+<style>
+  :root { --accent: #2563eb; --bg:#0f1724; --card:#0b1220; --muted:#9ca3af; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; margin:0; background: linear-gradient(180deg,#071126 0%, #071a1b 100%); color:#e6eef8; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px; }
+  .app { width:100%; max-width:980px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:20px; box-shadow:0 8px 30px rgba(2,6,23,0.6); }
+  header { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+  header h1 { font-size:20px; margin:0; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  input[type=file] { color:transparent; }
+  button, .btn {
+    background:var(--accent); border:0; color:white; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600;
+    box-shadow: 0 6px 18px rgba(37,99,235,0.12);
+  }
+  button[disabled] { opacity:0.45; cursor:default; box-shadow:none; }
+  .secondary { background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); padding:8px 10px; border-radius:8px; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:14px; align-items:start; }
+  .card { background:rgba(255,255,255,0.02); border-radius:10px; padding:12px; min-height:280px; display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center; border: 1px solid rgba(255,255,255,0.03);}
+  canvas { max-width:100%; border-radius:8px; background:transparent; }
+  .hint { color:var(--muted); font-size:13px; }
+  .footer { margin-top:12px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+  .progress { height:6px; background:rgba(255,255,255,0.04); border-radius:6px; overflow:hidden; width:180px; }
+  .progress > i { display:block; height:100%; background:linear-gradient(90deg,#60a5fa,#2563eb); width:0%; transition:width 300ms ease; }
+  @media (max-width:800px){ .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <div class="app" role="main" aria-label="Background removal app">
+    <header>
+      <h1>Background Remover — Download JPG</h1>
+      <div style="margin-left:auto" class="hint">Runs locally in your browser • No uploads</div>
+    </header>
+
+    <div class="controls">
+      <label class="secondary" title="Choose image">
+        Choose image
+        <input id="fileInput" type="file" accept="image/*" />
+      </label>
+
+      <button id="removeBtn" disabled>Remove Background</button>
+      <button id="downloadJpgBtn" class="btn" disabled>Download JPG</button>
+      <button id="downloadPngBtn" class="btn" disabled>Download PNG</button>
+
+      <div style="margin-left:8px" class="hint">Tip: for best results use portraits or clear subjects</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div style="width:100%; text-align:left; font-weight:600; margin-bottom:6px;">Original</div>
+        <canvas id="originalCanvas" width="640" height="480" aria-label="Original image"></canvas>
+      </div>
+
+      <div class="card">
+        <div style="width:100%; text-align:left; font-weight:600; margin-bottom:6px;">Result (background removed)</div>
+        <canvas id="resultCanvas" width="640" height="480" aria-label="Result image"></canvas>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="hint">Model: TensorFlow BodyPix (runs in-browser)</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <div class="progress" title="loading indicator"><i id="progressBar"></i></div>
+        <div id="status" class="hint">Idle</div>
+      </div>
+    </div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0.5/dist/body-pix.min.js"></script>
+<script>
+(async () => {
+  const fileInput = document.getElementById('fileInput');
+  const removeBtn = document.getElementById('removeBtn');
+  const downloadJpgBtn = document.getElementById('downloadJpgBtn');
+  const downloadPngBtn = document.getElementById('downloadPngBtn');
+  const originalCanvas = document.getElementById('originalCanvas');
+  const resultCanvas = document.getElementById('resultCanvas');
+  const statusEl = document.getElementById('status');
+  const progressBar = document.getElementById('progressBar');
+
+  const oCtx = originalCanvas.getContext('2d', { willReadFrequently: true });
+  const rCtx = resultCanvas.getContext('2d', { willReadFrequently: true });
+
+  let imageEl = new Image();
+  let model = null;
+  let lastResultBlobUrl = null;
+
+  function setStatus(text, progressPct=0) {
+    statusEl.textContent = text;
+    progressBar.style.width = `${progressPct}%`;
+  }
+
+  // Load BodyPix model (async). We do this early.
+  setStatus('Loading model (this may take a few seconds)...', 10);
+  try {
+    model = await bodyPix.load({
+      architecture: 'MobileNetV1',
+      outputStride: 16,
+      multiplier: 0.75,
+      quantBytes: 2
+    });
+    setStatus('Model loaded.', 100);
+  } catch (err) {
+    console.error('Model load failed', err);
+    setStatus('Model load failed — check console.');
+  }
+
+  fileInput.addEventListener('change', (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    imageEl = new Image();
+    imageEl.onload = () => {
+      // fit to canvas while preserving aspect ratio
+      const maxW = 1024;
+      const maxH = 768;
+      let w = imageEl.naturalWidth;
+      let h = imageEl.naturalHeight;
+      const ratio = Math.min(maxW / w, maxH / h, 1);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+      originalCanvas.width = w; originalCanvas.height = h;
+      resultCanvas.width = w; resultCanvas.height = h;
+      oCtx.clearRect(0,0,originalCanvas.width, originalCanvas.height);
+      oCtx.drawImage(imageEl, 0, 0, w, h);
+      // clear result canvas
+      rCtx.clearRect(0,0,resultCanvas.width, resultCanvas.height);
+      removeBtn.disabled = false;
+      downloadJpgBtn.disabled = true;
+      downloadPngBtn.disabled = true;
+      setStatus('Image loaded. Click "Remove Background".', 0);
+      // release blob url after a while
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    };
+    imageEl.onerror = () => {
+      setStatus('Failed to load image.');
+    };
+    imageEl.src = url;
+  });
+
+  removeBtn.addEventListener('click', async () => {
+    if (!model) { setStatus('Model not ready'); return; }
+    removeBtn.disabled = true;
+    setStatus('Segmenting person...', 10);
+
+    // draw original image onto an offscreen canvas for segmentation input
+    // use model.segmentPerson with good options
+    try {
+      // Provide an HTMLImageElement or canvas
+      const segmentation = await model.segmentPerson(originalCanvas, {
+        internalResolution: 'medium',
+        segmentationThreshold: 0.7,
+        maxDetections: 1,
+        scoreThreshold: 0.3,
+        nmsRadius: 20
+      });
+
+      setStatus('Compositing result...', 60);
+
+      // get image pixels
+      const w = originalCanvas.width;
+      const h = originalCanvas.height;
+      const src = oCtx.getImageData(0,0,w,h);
+      const dst = rCtx.createImageData(w,h);
+
+      // Build result pixels: keep subject pixels, make others transparent
+      const dataSrc = src.data;
+      const dataDst = dst.data;
+      // segmentation.data is Uint8Array of masks (0 or 1) same size as pixels count
+      for (let i = 0, p=0; i < segmentation.data.length; i++, p += 4) {
+        const mask = segmentation.data[i]; // 0 or 1
+        if (mask === 1) {
+          // copy RGBA
+          dataDst[p]   = dataSrc[p];
+          dataDst[p+1] = dataSrc[p+1];
+          dataDst[p+2] = dataSrc[p+2];
+          dataDst[p+3] = dataSrc[p+3];
+        } else {
+          // background -> transparent
+          dataDst[p] = dataDst[p+1] = dataDst[p+2] = 0;
+          dataDst[p+3] = 0;
+        }
+      }
+
+      // Put the transparent result onto result canvas
+      rCtx.clearRect(0,0,w,h);
+      rCtx.putImageData(dst, 0, 0);
+
+      setStatus('Finished. You can download PNG (transparent) or JPG (white bg).', 100);
+      downloadPngBtn.disabled = false;
+      downloadJpgBtn.disabled = false;
+    } catch (err) {
+      console.error(err);
+      setStatus('Background removal failed — see console.');
+    } finally {
+      removeBtn.disabled = false;
+      setTimeout(()=> setStatus('Idle', 0), 1200);
+    }
+  });
+
+  function downloadDataUrl(dataUrl, filename) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  downloadPngBtn.addEventListener('click', () => {
+    // PNG downloads with transparency preserved
+    try {
+      const dataUrl = resultCanvas.toDataURL('image/png');
+      downloadDataUrl(dataUrl, `result-${Date.now()}.png`);
+      setStatus('PNG downloaded', 0);
+    } catch (err) {
+      console.error(err); setStatus('Download failed.');
+    }
+  });
+
+  downloadJpgBtn.addEventListener('click', () => {
+    // JPG doesn't support transparency -> draw result onto white background first
+    try {
+      const w = resultCanvas.width;
+      const h = resultCanvas.height;
+      // temp canvas to composite white background
+      const tmp = document.createElement('canvas');
+      tmp.width = w; tmp.height = h;
+      const tctx = tmp.getContext('2d');
+      // fill white
+      tctx.fillStyle = '#ffffff';
+      tctx.fillRect(0,0,w,h);
+      // draw the result (which may have transparent areas)
+      tctx.drawImage(resultCanvas, 0, 0);
+      const dataUrl = tmp.toDataURL('image/jpeg', 0.92);
+      downloadDataUrl(dataUrl, `result-${Date.now()}.jpg`);
+      setStatus('JPG downloaded (white background)', 0);
+    } catch (err) {
+      console.error(err); setStatus('Download failed.');
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
