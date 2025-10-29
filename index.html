@@ -1,562 +1,364 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="km">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Background Remover - Select Area</title>
+    <title>AI Chatbot ដែលអាចនិយាយបាន</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
         }
-
+        
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
-
+        
         .container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            max-width: 1000px;
             width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #4CAF50, #2E7D32);
+            color: white;
+            padding: 20px;
             text-align: center;
         }
-
-        h1 {
-            color: #2d3436;
-            margin-bottom: 10px;
-            font-size: 2em;
-        }
-
-        .subtitle {
-            color: #636e72;
-            margin-bottom: 20px;
-        }
-
-        .upload-box {
-            border: 3px dashed #b2bec3;
-            border-radius: 10px;
-            padding: 40px 20px;
-            margin: 20px 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-
-        .upload-box:hover {
-            border-color: #74b9ff;
-            background: #e8f4ff;
-        }
-
-        .upload-icon {
-            font-size: 40px;
-            color: #74b9ff;
-            margin-bottom: 10px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .editor-area {
-            display: none;
-            margin: 20px 0;
-        }
-
-        .canvas-container {
-            position: relative;
-            display: inline-block;
-            border: 2px solid #dfe6e9;
-            border-radius: 10px;
-            overflow: hidden;
-            background: 
-                repeating-conic-gradient(#e0e0e0 0% 25%, #f5f5f5 0% 50%) 
-                50% / 20px 20px;
-        }
-
-        #imageCanvas {
-            display: block;
-            max-width: 100%;
-            max-height: 500px;
-            cursor: crosshair;
-        }
-
-        .tools {
-            margin: 15px 0;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .tool-btn {
-            background: #f8f9fa;
-            border: 2px solid #b2bec3;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 14px;
-        }
-
-        .tool-btn.active {
-            background: #74b9ff;
-            color: white;
-            border-color: #74b9ff;
-        }
-
-        .tool-btn:hover {
-            background: #dfe6e9;
-        }
-
-        .tool-btn.active:hover {
-            background: #0984e3;
-        }
-
-        .brush-size {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 10px 0;
-        }
-
-        .brush-size input {
-            width: 100px;
-        }
-
-        .btn {
-            background: #74b9ff;
-            color: white;
-            border: none;
-            padding: 10px 25px;
-            font-size: 14px;
-            border-radius: 20px;
-            cursor: pointer;
-            margin: 5px;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            background: #0984e3;
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: #00b894;
-        }
-
-        .btn-success:hover {
-            background: #00a085;
-        }
-
-        .btn-danger {
-            background: #e17055;
-        }
-
-        .btn-danger:hover {
-            background: #d63031;
-        }
-
-        .instructions {
-            background: #fff9e6;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            text-align: left;
-        }
-
-        .instructions h3 {
-            color: #e17055;
-            margin-bottom: 8px;
-        }
-
-        .instructions ul {
-            padding-left: 20px;
-            color: #636e72;
-        }
-
-        .instructions li {
+        
+        .header h1 {
+            font-size: 28px;
             margin-bottom: 5px;
         }
-
-        .preview-area {
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .chat-container {
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            background-color: #4CAF50;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .bot-message {
+            align-self: flex-start;
+            background-color: #f1f1f1;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background-color: white;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+            font-size: 16px;
+        }
+        
+        #send-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        
+        #send-btn:hover {
+            background-color: #388E3C;
+        }
+        
+        .voice-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(0.9);
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+            
+            100% {
+                transform: scale(0.9);
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
+        
+        .hidden {
             display: none;
-            margin: 20px 0;
         }
-
-        .preview-container {
-            display: inline-block;
-            border: 2px solid #dfe6e9;
-            border-radius: 10px;
-            overflow: hidden;
-            background: 
-                repeating-conic-gradient(#e0e0e0 0% 25%, #f5f5f5 0% 50%) 
-                50% / 20px 20px;
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
         }
-
-        #previewCanvas {
-            display: block;
-            max-width: 100%;
-            max-height: 400px;
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #888;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+        
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎯 Manual Background Remover</h1>
-        <p class="subtitle">Select background areas to remove - You have full control</p>
-        
-        <div class="upload-box" id="uploadBox">
-            <div class="upload-icon">📁</div>
-            <h3>Click to Upload Image</h3>
-            <p>or drag and drop your file here</p>
-            <p style="color: #636e72; margin-top: 10px; font-size: 0.9em;">
-                Supports: JPG, PNG, WEBP
-            </p>
+        <div class="header">
+            <h1>AI Chatbot ដែលអាចនិយាយបាន</h1>
+            <p>សួរសំណួរណាមួយ ហើយ AI នឹងឆ្លើយតបតាមរយៈសំឡេង</p>
         </div>
-        <input type="file" id="fileInput" class="file-input" accept="image/*">
         
-        <div class="editor-area" id="editorArea">
-            <div class="instructions">
-                <h3>📝 How to Remove Background:</h3>
-                <ul>
-                    <li>Select <strong>Remove Area</strong> tool</li>
-                    <li>Adjust brush size as needed</li>
-                    <li>Paint over background areas you want to remove</li>
-                    <li>Use <strong>Keep Area</strong> to fix mistakes</li>
-                    <li>Click <strong>Preview Result</strong> when done</li>
-                </ul>
-            </div>
-            
-            <div class="canvas-container">
-                <canvas id="imageCanvas"></canvas>
-            </div>
-            
-            <div class="tools">
-                <button class="tool-btn active" data-tool="remove">Remove Area</button>
-                <button class="tool-btn" data-tool="keep">Keep Area</button>
-                <button class="tool-btn" data-tool="erase">Erase Marks</button>
-            </div>
-            
-            <div class="brush-size">
-                <label>Brush Size:</label>
-                <input type="range" id="brushSize" min="5" max="100" value="20">
-                <span id="brushSizeValue">20px</span>
-            </div>
-            
-            <div>
-                <button class="btn" id="previewBtn">Preview Result</button>
-                <button class="btn btn-danger" id="clearBtn">Clear All Marks</button>
-                <button class="btn" id="resetBtn">Upload New Image</button>
+        <div class="chat-container" id="chat-container">
+            <div class="message bot-message">
+                <p>សួស្តី! ខ្ញុំជា AI chatbot ដែលអាចនិយាយបាន។ តើខ្ញុំអាចជួយអ្វីដល់អ្នក?</p>
             </div>
         </div>
-
-        <div class="preview-area" id="previewArea">
-            <h3>✨ Final Result</h3>
-            <div class="preview-container">
-                <canvas id="previewCanvas"></canvas>
-            </div>
-            <div style="margin-top: 15px;">
-                <button class="btn btn-success" id="downloadBtn">Download PNG</button>
-                <button class="btn" id="backToEditBtn">Back to Editing</button>
-            </div>
+        
+        <div class="voice-indicator" id="voice-indicator">
+            <div class="pulse"></div>
+            <span>AI កំពុងនិយាយ...</span>
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="សួរសំណួររបស់អ្នកនៅទីនេះ...">
+            <button id="send-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
         </div>
     </div>
 
     <script>
-        class ManualBackgroundRemover {
-            constructor() {
-                this.originalImage = null;
-                this.canvas = document.getElementById('imageCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.previewCanvas = document.getElementById('previewCanvas');
-                this.previewCtx = this.previewCanvas.getContext('2d');
-                this.currentTool = 'remove';
-                this.brushSize = 20;
-                this.isDrawing = false;
-                this.maskCanvas = null;
-                this.maskCtx = null;
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContainer = document.getElementById('chat-container');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const voiceIndicator = document.getElementById('voice-indicator');
+            
+            // លាក់សូចនាករសំឡេងដំបូង
+            voiceIndicator.classList.add('hidden');
+            
+            // បង្កើតវត្ថុ SpeechSynthesisUtterance
+            const speech = new SpeechSynthesisUtterance();
+            speech.lang = 'km-KH'; // ភាសាខ្មែរ
+            speech.rate = 1.0;
+            speech.pitch = 1.0;
+            speech.volume = 1.0;
+            
+            // កំណត់សំឡេងប្រុស
+            function setMaleVoice() {
+                const voices = window.speechSynthesis.getVoices();
+                // រកមើលសំឡេងប្រុស
+                const maleVoice = voices.find(voice => 
+                    voice.lang.includes('km') || 
+                    voice.lang.includes('en') && 
+                    voice.name.toLowerCase().includes('male')
+                );
                 
-                this.init();
-            }
-
-            init() {
-                this.setupEventListeners();
-                this.createMaskCanvas();
-            }
-
-            setupEventListeners() {
-                // Upload events
-                document.getElementById('uploadBox').addEventListener('click', () => {
-                    document.getElementById('fileInput').click();
-                });
-
-                document.getElementById('fileInput').addEventListener('change', (e) => {
-                    this.handleFileSelect(e);
-                });
-
-                // Drag and drop
-                this.setupDragAndDrop();
-
-                // Tool selection
-                document.querySelectorAll('.tool-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                        e.target.classList.add('active');
-                        this.currentTool = e.target.dataset.tool;
-                    });
-                });
-
-                // Brush size
-                document.getElementById('brushSize').addEventListener('input', (e) => {
-                    this.brushSize = parseInt(e.target.value);
-                    document.getElementById('brushSizeValue').textContent = this.brushSize + 'px';
-                });
-
-                // Control buttons
-                document.getElementById('previewBtn').addEventListener('click', () => {
-                    this.previewResult();
-                });
-
-                document.getElementById('clearBtn').addEventListener('click', () => {
-                    this.clearMarks();
-                });
-
-                document.getElementById('resetBtn').addEventListener('click', () => {
-                    this.reset();
-                });
-
-                document.getElementById('downloadBtn').addEventListener('click', () => {
-                    this.downloadImage();
-                });
-
-                document.getElementById('backToEditBtn').addEventListener('click', () => {
-                    this.showEditor();
-                });
-
-                // Canvas drawing events
-                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-                this.canvas.addEventListener('mouseleave', () => this.stopDrawing());
-            }
-
-            setupDragAndDrop() {
-                const uploadBox = document.getElementById('uploadBox');
-                
-                uploadBox.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadBox.style.borderColor = '#74b9ff';
-                    uploadBox.style.background = '#e8f4ff';
-                });
-
-                uploadBox.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    uploadBox.style.borderColor = '#b2bec3';
-                    uploadBox.style.background = '#f8f9fa';
-                });
-
-                uploadBox.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadBox.style.borderColor = '#b2bec3';
-                    uploadBox.style.background = '#f8f9fa';
-                    
-                    if (e.dataTransfer.files.length) {
-                        document.getElementById('fileInput').files = e.dataTransfer.files;
-                        this.handleFileSelect(e);
-                    }
-                });
-            }
-
-            createMaskCanvas() {
-                this.maskCanvas = document.createElement('canvas');
-                this.maskCtx = this.maskCanvas.getContext('2d');
-            }
-
-            handleFileSelect(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select an image file');
-                    return;
+                if (maleVoice) {
+                    speech.voice = maleVoice;
                 }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.originalImage = new Image();
-                    this.originalImage.onload = () => {
-                        this.setupCanvas();
-                        this.showEditor();
-                    };
-                    this.originalImage.src = e.target.result;
+            }
+            
+            // រង់ចាំសំឡេងត្រូវបានផ្ទុក
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = setMaleVoice;
+            }
+            
+            // បង្កើតសាររបស់អ្នកប្រើ
+            function addUserMessage(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'user-message');
+                messageDiv.innerHTML = `<p>${message}</p>`;
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // បង្កើតសាររបស់ bot
+            function addBotMessage(message) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message', 'bot-message');
+                messageDiv.innerHTML = `<p>${message}</p>`;
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // បង្ហាញសូចនាករការវាយ
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.classList.add('typing-indicator');
+                typingDiv.id = 'typing-indicator';
+                typingDiv.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                chatContainer.appendChild(typingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            
+            // លាក់សូចនាករការវាយ
+            function hideTypingIndicator() {
+                const typingIndicator = document.getElementById('typing-indicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
+            }
+            
+            // និយាយពាក្យសំដី
+            function speakText(text) {
+                speech.text = text;
+                voiceIndicator.classList.remove('hidden');
+                window.speechSynthesis.speak(speech);
+                
+                // លាក់សូចនាករនៅពេលបញ្ចប់
+                speech.onend = function() {
+                    voiceIndicator.classList.add('hidden');
                 };
-                reader.readAsDataURL(file);
             }
-
-            setupCanvas() {
-                // Set canvas size to image size (max 800px for performance)
-                const maxSize = 800;
-                let width = this.originalImage.width;
-                let height = this.originalImage.height;
-
-                if (width > maxSize || height > maxSize) {
-                    const ratio = Math.min(maxSize / width, maxSize / height);
-                    width *= ratio;
-                    height *= ratio;
-                }
-
-                this.canvas.width = width;
-                this.canvas.height = height;
-                this.maskCanvas.width = width;
-                this.maskCanvas.height = height;
-
-                // Draw original image
-                this.ctx.drawImage(this.originalImage, 0, 0, width, height);
+            
+            // ដំណើរការសំណួររបស់អ្នកប្រើ
+            function processUserInput() {
+                const message = userInput.value.trim();
+                if (message === '') return;
                 
-                // Initialize mask as transparent
-                this.maskCtx.clearRect(0, 0, width, height);
-            }
-
-            showEditor() {
-                document.getElementById('uploadBox').style.display = 'none';
-                document.getElementById('editorArea').style.display = 'block';
-                document.getElementById('previewArea').style.display = 'none';
-            }
-
-            showPreview() {
-                document.getElementById('editorArea').style.display = 'none';
-                document.getElementById('previewArea').style.display = 'block';
-            }
-
-            startDrawing(e) {
-                this.isDrawing = true;
-                this.draw(e);
-            }
-
-            draw(e) {
-                if (!this.isDrawing) return;
-
-                const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                this.maskCtx.globalCompositeOperation = 'source-over';
+                // បង្ហាញសាររបស់អ្នកប្រើ
+                addUserMessage(message);
+                userInput.value = '';
                 
-                if (this.currentTool === 'erase') {
-                    // Erase marks
-                    this.maskCtx.globalCompositeOperation = 'destination-out';
-                    this.maskCtx.beginPath();
-                    this.maskCtx.arc(x, y, this.brushSize, 0, Math.PI * 2);
-                    this.maskCtx.fill();
-                } else {
-                    // Draw marks
-                    this.maskCtx.fillStyle = this.currentTool === 'remove' ? 'rgba(255, 0, 0, 0.5)' : 'rgba(0, 255, 0, 0.5)';
-                    this.maskCtx.beginPath();
-                    this.maskCtx.arc(x, y, this.brushSize, 0, Math.PI * 2);
-                    this.maskCtx.fill();
-                }
-
-                this.redrawCanvas();
-            }
-
-            stopDrawing() {
-                this.isDrawing = false;
-            }
-
-            redrawCanvas() {
-                // Clear canvas
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                // បង្ហាញសូចនាករការវាយ
+                showTypingIndicator();
                 
-                // Draw original image
-                this.ctx.drawImage(this.originalImage, 0, 0, this.canvas.width, this.canvas.height);
-                
-                // Draw mask overlay
-                this.ctx.drawImage(this.maskCanvas, 0, 0);
-            }
-
-            previewResult() {
-                const width = this.canvas.width;
-                const height = this.canvas.height;
-
-                // Set preview canvas size
-                this.previewCanvas.width = width;
-                this.previewCanvas.height = height;
-
-                // Get mask data
-                const maskData = this.maskCtx.getImageData(0, 0, width, height);
-                const maskPixels = maskData.data;
-
-                // Create result image
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-
-                // Draw original image
-                tempCtx.drawImage(this.originalImage, 0, 0, width, height);
-                const imageData = tempCtx.getImageData(0, 0, width, height);
-                const pixels = imageData.data;
-
-                // Apply mask - remove pixels marked with red, keep pixels marked with green
-                for (let i = 0; i < pixels.length; i += 4) {
-                    const maskIndex = i;
+                // ពន្យារពេលសម្រាប់បង្កើតបទឆ្លើយតប
+                setTimeout(() => {
+                    hideTypingIndicator();
                     
-                    // Red marks (remove) - set alpha to 0
-                    if (maskPixels[maskIndex] > 100 && maskPixels[maskIndex + 1] < 100) {
-                        pixels[i + 3] = 0;
+                    // បង្កើតបទឆ្លើយតប
+                    let response;
+                    const lowerMessage = message.toLowerCase();
+                    
+                    if (lowerMessage.includes('សួស្តី') || lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+                        response = "សួស្តី! តើអ្នកសុខសប្បាយជាទេ? តើខ្ញុំអាចជួយអ្វីដល់អ្នក?";
+                    } else if (lowerMessage.includes('អ្នកឈ្មោះអី') || lowerMessage.includes('what is your name')) {
+                        response = "ខ្ញុំជា AI chatbot ដែលអាចនិយាយបាន។ អ្នកអាចហៅខ្ញុំថា ChatBot AI។";
+                    } else if (lowerMessage.includes('អរគុណ') || lowerMessage.includes('thank you')) {
+                        response = "មិនអីទេ! វាជាកិត្តិយសរបស់ខ្ញុំក្នុងការជួយអ្នក។";
+                    } else if (lowerMessage.includes('ជំរាបសួរ') || lowerMessage.includes('goodbye')) {
+                        response = "ជំរាបសួរ! សូមអរគុណសម្រាប់ការសន្ទនា។ សូមអោយមានថ្ងៃល្អ!";
+                    } else if (lowerMessage.includes('អាយ') || lowerMessage.includes('ai')) {
+                        response = "បាទ/ចាស ខ្ញុំជា AI chatbot ដែលអាចនិយាយបាន។ ខ្ញុំអាចជួយអ្នកឆ្លើយសំណួរ និងផ្តល់ព័ត៌មាន។";
+                    } else if (lowerMessage.includes('ខ្មែរ') || lowerMessage.includes('cambodia')) {
+                        response = "ពិតជាហើយ! ខ្ញុំអាចនិយាយជាភាសាខ្មែរ និងជួយអ្នកអំពីប្រទេសកម្ពុជា។";
+                    } else {
+                        response = "សូមទោស ខ្ញុំមិនទាន់យល់សំណួររបស់អ្នកទេ។ សូមសួរសំណួរផ្សេងទៀត!";
                     }
-                    // Green marks (keep) - ensure alpha is 255
-                    else if (maskPixels[maskIndex + 1] > 100 && maskPixels[maskIndex] < 100) {
-                        pixels[i + 3] = 255;
-                    }
+                    
+                    // បង្ហាញនិងនិយាយបទឆ្លើយតប
+                    addBotMessage(response);
+                    speakText(response);
+                }, 1500);
+            }
+            
+            // ការចុចប៊ូតុងផ្ញើ
+            sendBtn.addEventListener('click', processUserInput);
+            
+            // ការចុច Enter នៅលើ keyboard
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    processUserInput();
                 }
-
-                tempCtx.putImageData(imageData, 0, 0);
-                
-                // Draw result to preview canvas
-                this.previewCtx.clearRect(0, 0, width, height);
-                this.previewCtx.drawImage(tempCanvas, 0, 0);
-
-                this.showPreview();
-            }
-
-            clearMarks() {
-                this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
-                this.redrawCanvas();
-            }
-
-            reset() {
-                this.originalImage = null;
-                document.getElementById('fileInput').value = '';
-                document.getElementById('uploadBox').style.display = 'block';
-                document.getElementById('editorArea').style.display = 'none';
-                document.getElementById('previewArea').style.display = 'none';
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
-            }
-
-            downloadImage() {
-                const link = document.createElement('a');
-                link.download = 'background-removed.png';
-                link.href = this.previewCanvas.toDataURL('image/png');
-                link.click();
-            }
-        }
-
-        // Start the app
-        document.addEventListener('DOMContentLoaded', () => {
-            new ManualBackgroundRemover();
+            });
+            
+            // កំណត់សំឡេងដំបូង
+            setMaleVoice();
         });
     </script>
 </body>
